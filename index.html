@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ZRAW | Videography & Editing</title>
+    <meta
+      name="description"
+      content="Premium horizontal portfolio website for ZRAW videography and video editing work."
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="noise" aria-hidden="true"></div>
+
+    <header class="topbar">
+      <a class="brand" href="#home" aria-label="ZRAW home">
+        <img src="ZRAW.png" alt="ZRAW logo" />
+        <span>ZRAW</span>
+      </a>
+      <nav class="nav" aria-label="Primary">
+        <a href="#work">Work</a>
+        <a href="#process">Process</a>
+        <a href="#contact">Contact</a>
+      </nav>
+    </header>
+
+    <main class="stage" id="stage" tabindex="0">
+      <section class="panel hero" id="home" aria-labelledby="hero-title">
+        <div class="hero-mark">
+          <img src="ZRAW.png" alt="" />
+        </div>
+        <div class="hero-copy">
+          <p class="kicker">Videography / Editing / Story Craft</p>
+          <h1 id="hero-title">ZRAW</h1>
+          <p>
+            High-contrast moving images with a clean, premium finish. Built for
+            reels, campaigns, events, artist films, and social-first edits.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="#work">View work</a>
+            <a class="button ghost" href="#contact">Book a cut</a>
+          </div>
+        </div>
+        <div class="scroll-note">Scroll sideways</div>
+      </section>
+
+      <section class="panel reel-panel" id="work" aria-labelledby="work-title">
+        <div class="section-heading">
+          <p class="kicker">Video Index</p>
+          <h2 id="work-title">One video per scroll, built for a long body of work.</h2>
+        </div>
+        <div class="gallery-shell">
+          <button class="gallery-arrow gallery-arrow-prev" type="button" id="videoPrev" aria-label="Previous video">
+            <
+          </button>
+          <div class="video-strip" id="videoStrip" aria-label="Video thumbnails"></div>
+          <button class="gallery-arrow gallery-arrow-next" type="button" id="videoNext" aria-label="Next video">
+            >
+          </button>
+        </div>
+      </section>
+
+      <section class="panel services" id="process" aria-labelledby="process-title">
+        <div class="section-heading compact">
+          <p class="kicker">Workflow</p>
+          <h2 id="process-title">A clean production lane from idea to final export.</h2>
+        </div>
+        <div class="service-list">
+          <article>
+            <span>01</span>
+            <h3>Pre-visual</h3>
+            <p>Reference boards, shot priorities, lighting direction, and edit rhythm.</p>
+          </article>
+          <article>
+            <span>02</span>
+            <h3>Shoot</h3>
+            <p>Focused coverage with strong framing, movement, and usable story beats.</p>
+          </article>
+          <article>
+            <span>03</span>
+            <h3>Finish</h3>
+            <p>Editorial polish, color tone, sound texture, captions, and platform cuts.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel contact" id="contact" aria-labelledby="contact-title">
+        <div class="contact-card">
+          <img src="ZRAW.png" alt="" />
+          <p class="kicker">Available for new video projects</p>
+          <h2 id="contact-title">Let the next frame feel intentional.</h2>
+          <a class="button primary" href="mailto:hello@zraw.studio">hello@zraw.studio</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="rail">
+      <div class="progress" id="progress"></div>
+    </footer>
+
+    <div class="player-shell" id="playerShell" aria-hidden="true">
+      <div class="player-backdrop" data-close-player></div>
+      <section class="player-panel" aria-label="Video player">
+        <div class="player-topline">
+          <div>
+            <p class="kicker" id="playerCategory">Video</p>
+            <h2 id="playerTitle">Selected Work</h2>
+          </div>
+          <button class="icon-button" type="button" data-close-player aria-label="Close player">
+            X
+          </button>
+        </div>
+        <div class="video-frame">
+          <video id="featureVideo" playsinline preload="metadata"></video>
+          <iframe
+            id="drivePlayer"
+            title="Embedded video player"
+            allow="autoplay; fullscreen"
+            allowfullscreen
+          ></iframe>
+          <div class="video-fallback" id="videoFallback">
+            Video source coming soon.
+          </div>
+        </div>
+        <div class="player-controls">
+          <button class="control-button" type="button" id="playToggle">Play</button>
+          <label class="volume-control">
+            <span>Volume</span>
+            <input id="volumeSlider" type="range" min="0" max="1" step="0.05" value="0.8" />
+          </label>
+          <label class="quality-control">
+            <span>Resolution</span>
+            <select id="qualitySelect"></select>
+          </label>
+        </div>
+      </section>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
