@@ -18,6 +18,10 @@
         <img src="ZRAW.png" alt="ZRAW logo" />
         <span>ZRAW</span>
       </a>
+      <button class="menu-toggle" id="menuToggle" type="button" aria-label="Open navigation" aria-expanded="false">
+        <span></span>
+        <span></span>
+      </button>
       <nav class="nav" aria-label="Primary">
         <a href="#work">Work</a>
         <a href="#process">Process</a>
@@ -52,11 +56,11 @@
         </div>
         <div class="gallery-shell">
           <button class="gallery-arrow gallery-arrow-prev" type="button" id="videoPrev" aria-label="Previous video">
-            <
+            <span class="skip-icon skip-icon-prev" aria-hidden="true"></span>
           </button>
           <div class="video-strip" id="videoStrip" aria-label="Video thumbnails"></div>
           <button class="gallery-arrow gallery-arrow-next" type="button" id="videoNext" aria-label="Next video">
-            >
+            <span class="skip-icon skip-icon-next" aria-hidden="true"></span>
           </button>
         </div>
       </section>
@@ -99,6 +103,19 @@
       <div class="progress" id="progress"></div>
     </footer>
 
+    <aside class="bottom-bar" aria-label="Quick actions">
+      <p>Ready for sharp edits, event films, and campaign cuts.</p>
+      <div class="bottom-actions">
+        <a class="button primary" href="#work">Promo reel</a>
+        <a
+          class="button ghost"
+          href="mailto:hello@zraw.studio?subject=Quick%20Project%20Message&body=Hi%20ZRAW%2C%20I%20want%20to%20ask%20about%20a%20video%20project."
+        >
+          Quick message
+        </a>
+      </div>
+    </aside>
+
     <div class="player-shell" id="playerShell" aria-hidden="true">
       <div class="player-backdrop" data-close-player></div>
       <section class="player-panel" aria-label="Video player">
@@ -112,6 +129,9 @@
           </button>
         </div>
         <div class="video-frame">
+          <button class="fullscreen-exit" type="button" id="fullscreenExit" aria-label="Exit fullscreen">
+            X
+          </button>
           <video id="featureVideo" playsinline preload="metadata"></video>
           <iframe
             id="drivePlayer"
@@ -124,7 +144,15 @@
           </div>
         </div>
         <div class="player-controls">
-          <button class="control-button" type="button" id="playToggle">Play</button>
+          <div class="playback-group">
+            <button class="control-button compact-control" type="button" id="playerPrev" aria-label="Previous video">
+              <span class="skip-icon skip-icon-prev" aria-hidden="true"></span>
+            </button>
+            <button class="control-button" type="button" id="playToggle">Play</button>
+            <button class="control-button compact-control" type="button" id="playerNext" aria-label="Next video">
+              <span class="skip-icon skip-icon-next" aria-hidden="true"></span>
+            </button>
+          </div>
           <label class="volume-control">
             <span>Volume</span>
             <input id="volumeSlider" type="range" min="0" max="1" step="0.05" value="0.8" />
@@ -133,6 +161,9 @@
             <span>Resolution</span>
             <select id="qualitySelect"></select>
           </label>
+          <button class="control-button compact-control" type="button" id="fullscreenToggle">
+            Full
+          </button>
         </div>
       </section>
     </div>

@@ -1,5 +1,7 @@
 const stage = document.querySelector("#stage");
 const progress = document.querySelector("#progress");
+const topbar = document.querySelector(".topbar");
+const menuToggle = document.querySelector("#menuToggle");
 const videoStrip = document.querySelector("#videoStrip");
 const videoPrev = document.querySelector("#videoPrev");
 const videoNext = document.querySelector("#videoNext");
@@ -10,13 +12,21 @@ const videoFallback = document.querySelector("#videoFallback");
 const playerTitle = document.querySelector("#playerTitle");
 const playerCategory = document.querySelector("#playerCategory");
 const playToggle = document.querySelector("#playToggle");
+const playerPrev = document.querySelector("#playerPrev");
+const playerNext = document.querySelector("#playerNext");
+const fullscreenToggle = document.querySelector("#fullscreenToggle");
+const fullscreenExit = document.querySelector("#fullscreenExit");
 const volumeSlider = document.querySelector("#volumeSlider");
 const qualitySelect = document.querySelector("#qualitySelect");
 let activePlayer = "direct";
+let currentVideoIndex = 0;
 let youtubePlaying = false;
+let suppressNextClick = false;
+let previewObserver;
 
 // Add each portfolio item here.
 // thumbnail can be a local file such as "thumbnails/video-01.jpg" or a hosted image URL.
+// preview can be a GIF such as "thumbnails/video-01-preview.gif" for hover animation.
 // Leave thumbnail blank to use Google Drive's generated thumbnail.
 const videos = [
   {
@@ -26,6 +36,7 @@ const videos = [
     youtubeId: "uFJPprYX3gw",
     driveId: "",
     thumbnail: "",
+    preview: "",
     sources: {
       "1080p": "",
       "720p": "",
@@ -36,7 +47,8 @@ const videos = [
     category: "Commercial",
     year: "2026",
     driveId: "1hFof8Tl1nU7YVeP6VtE7xfk2IFYkYZiB",
-    thumbnail: "",
+    thumbnail: "thumbnails/zraw-cut-02-thumb.jpg",
+    preview: "thumbnails/zraw-cut-02-preview.gif",
     sources: {
       "1080p": "",
       "720p": "",
@@ -48,6 +60,7 @@ const videos = [
     year: "2026",
     driveId: "1xuLg3pyY5XQe7w8aluM4gO5TLGxsxhsn",
     thumbnail: "",
+    preview: "",
     sources: {
       "1080p": "",
       "720p": "",
@@ -61,6 +74,7 @@ const videos = [
       year: "2026",
       driveId: "",
       thumbnail: "",
+      preview: "",
       sources: {
         "1080p": "",
         "720p": "",
@@ -88,6 +102,9 @@ function youtubeVideoUrl(videoId) {
   const params = new URLSearchParams({
     enablejsapi: "1",
     controls: "0",
+    disablekb: "1",
+    fs: "0",
+    iv_load_policy: "3",
     rel: "0",
     modestbranding: "1",
     playsinline: "1",
@@ -105,6 +122,14 @@ function thumbFor(video) {
   return video.thumbnail || youtubeThumbUrl(video.youtubeId) || driveThumbUrl(video.driveId);
 }
 
+function previewFor(video) {
+  return video.preview || "";
+}
+
+function cssUrl(value) {
+  return value.replaceAll("'", "%27");
+}
+
 function isDriveEntry(video) {
   return !Object.values(video.sources || {}).some(Boolean) && Boolean(video.driveId);
 }
@@ -118,6 +143,39 @@ function activeVideoIndex() {
     const distance = Math.abs(stripCenter - cardCenter);
     return distance < best.distance ? { index, distance } : best;
   }, { index: 0, distance: Infinity }).index;
+}
+
+function setPreviewCard(card) {
+  if (!card) return;
+  videoStrip?.querySelectorAll(".video-card.is-previewing").forEach((item) => {
+    if (item !== card) item.classList.remove("is-previewing");
+  });
+  card.classList.add("is-previewing");
+}
+
+function setupPreviewObserver() {
+  if (!videoStrip || !("IntersectionObserver" in window)) return;
+
+  previewObserver?.disconnect();
+  previewObserver = new IntersectionObserver(
+    (entries) => {
+      const activeEntry = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+
+      if (activeEntry) setPreviewCard(activeEntry.target);
+    },
+    {
+      root: videoStrip,
+      threshold: [0.45, 0.65, 0.85],
+    }
+  );
+
+  videoStrip.querySelectorAll(".video-card").forEach((card) => {
+    previewObserver.observe(card);
+  });
+
+  setPreviewCard(videoStrip.querySelector(".video-card"));
 }
 
 function scrollToVideo(index) {
@@ -162,6 +220,13 @@ function postToEmbed(command, args = []) {
     }),
     "*"
   );
+}
+
+function playAfterEmbedLoad() {
+  window.setTimeout(() => {
+    postToEmbed("playVideo");
+    postToEmbed("setVolume", [Math.round(Number(volumeSlider.value) * 100)]);
+  }, 450);
 }
 
 function showYoutubePlayer(video) {
@@ -228,13 +293,15 @@ function renderVideos() {
 
   videoStrip.innerHTML = videos
     .map((video, index) => {
-      const thumb = thumbFor(video).replaceAll("'", "%27");
-      const style = thumb ? ` style="--thumb: url('${thumb}')"` : "";
+      const thumb = cssUrl(thumbFor(video));
+      const preview = cssUrl(previewFor(video));
+      const vars = [
+        thumb ? `--thumb: url('${thumb}')` : "",
+        preview ? `--preview: url('${preview}')` : "",
+      ].filter(Boolean).join("; ");
+      const style = vars ? ` style="${vars}"` : "";
       return `
-        <article class="video-card"${style}>
-          <button class="video-open" type="button" data-video-index="${index}" aria-label="Play ${video.title}">
-            <span class="play-glyph"></span>
-          </button>
+        <article class="video-card"${style} data-video-index="${index}" role="button" tabindex="0" aria-label="Play ${video.title}">
           <div class="video-meta">
             <span>${String(index + 1).padStart(2, "0")}</span>
             <p>${video.category}</p>
@@ -245,6 +312,7 @@ function renderVideos() {
       `;
     })
     .join("");
+  setupPreviewObserver();
 }
 
 function loadVideo(video) {
@@ -291,11 +359,13 @@ function loadVideo(video) {
   playToggle.textContent = "Play";
 }
 
-function openPlayer(video) {
+function openPlayer(video, index = currentVideoIndex) {
+  currentVideoIndex = index;
   loadVideo(video);
   playerShell.classList.add("is-open");
   playerShell.setAttribute("aria-hidden", "false");
   document.body.classList.add("player-open");
+  scrollToVideo(currentVideoIndex);
 }
 
 function closePlayer() {
@@ -327,7 +397,57 @@ function togglePlay() {
   }
 }
 
+function openPlayerAt(index, autoplay = false) {
+  const nextIndex = (index + videos.length) % videos.length;
+  currentVideoIndex = nextIndex;
+  openPlayer(videos[nextIndex], nextIndex);
+
+  if (!autoplay) return;
+
+  if (activePlayer === "youtube") {
+    youtubePlaying = true;
+    playToggle.textContent = "Pause";
+    playAfterEmbedLoad();
+    return;
+  }
+
+  if (featureVideo.src) {
+    featureVideo.play().catch(fallbackToDriveEmbed);
+    playToggle.textContent = "Pause";
+  }
+}
+
+function openAdjacentVideo(direction) {
+  openPlayerAt(currentVideoIndex + direction, true);
+}
+
+function toggleFullscreen() {
+  const target = document.querySelector(".video-frame");
+
+  if (!document.fullscreenElement) {
+    target.requestFullscreen?.();
+    fullscreenToggle.textContent = "Exit";
+    return;
+  }
+
+  document.exitFullscreen?.();
+  fullscreenToggle.textContent = "Full";
+}
+
 renderVideos();
+
+menuToggle?.addEventListener("click", () => {
+  const willOpen = menuToggle.getAttribute("aria-expanded") !== "true";
+  menuToggle.setAttribute("aria-expanded", String(willOpen));
+  topbar?.classList.toggle("is-open", willOpen);
+});
+
+document.querySelectorAll(".nav a").forEach((link) => {
+  link.addEventListener("click", () => {
+    topbar?.classList.remove("is-open");
+    menuToggle?.setAttribute("aria-expanded", "false");
+  });
+});
 
 if (stage) {
   stage.addEventListener(
@@ -354,21 +474,33 @@ if (stage) {
   let isDown = false;
   let startX = 0;
   let scrollLeft = 0;
+  let pointerMoved = false;
 
   stage.addEventListener("pointerdown", (event) => {
     if (event.target.closest("button, a, input, select")) return;
+    if (event.target.closest(".video-card")) return;
     isDown = true;
     startX = event.pageX;
     scrollLeft = stage.scrollLeft;
+    pointerMoved = false;
     stage.setPointerCapture(event.pointerId);
   });
 
   stage.addEventListener("pointermove", (event) => {
     if (!isDown) return;
+    if (Math.abs(event.pageX - startX) > 8) {
+      pointerMoved = true;
+    }
     stage.scrollLeft = scrollLeft - (event.pageX - startX);
   });
 
-  stage.addEventListener("pointerup", () => {
+  stage.addEventListener("pointerup", (event) => {
+    const card = event.target.closest("[data-video-index]");
+    if (card && !pointerMoved) {
+      const index = Number(card.dataset.videoIndex);
+      openPlayer(videos[index], index);
+      suppressNextClick = true;
+    }
     isDown = false;
   });
 
@@ -386,9 +518,41 @@ videoNext?.addEventListener("click", () => {
 });
 
 videoStrip?.addEventListener("click", (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  if (suppressNextClick) {
+    suppressNextClick = false;
+    return;
+  }
   const button = event.target.closest("[data-video-index]");
   if (!button) return;
-  openPlayer(videos[Number(button.dataset.videoIndex)]);
+  const index = Number(button.dataset.videoIndex);
+  openPlayer(videos[index], index);
+});
+
+videoStrip?.addEventListener(
+  "pointerover",
+  (event) => {
+    setPreviewCard(event.target.closest(".video-card"));
+  },
+  { passive: true }
+);
+
+videoStrip?.addEventListener(
+  "touchstart",
+  (event) => {
+    setPreviewCard(event.target.closest(".video-card"));
+  },
+  { passive: true }
+);
+
+videoStrip?.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  const card = event.target.closest("[data-video-index]");
+  if (!card) return;
+  event.preventDefault();
+  const index = Number(card.dataset.videoIndex);
+  openPlayer(videos[index], index);
 });
 
 document.querySelectorAll("[data-close-player]").forEach((button) => {
@@ -396,6 +560,20 @@ document.querySelectorAll("[data-close-player]").forEach((button) => {
 });
 
 playToggle?.addEventListener("click", togglePlay);
+
+playerPrev?.addEventListener("click", () => {
+  openAdjacentVideo(-1);
+});
+
+playerNext?.addEventListener("click", () => {
+  openAdjacentVideo(1);
+});
+
+fullscreenToggle?.addEventListener("click", toggleFullscreen);
+
+fullscreenExit?.addEventListener("click", () => {
+  document.exitFullscreen?.();
+});
 
 featureVideo?.addEventListener("error", fallbackToDriveEmbed);
 
@@ -438,4 +616,8 @@ window.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && playerShell.classList.contains("is-open")) {
     closePlayer();
   }
+});
+
+document.addEventListener("fullscreenchange", () => {
+  fullscreenToggle.textContent = document.fullscreenElement ? "Exit" : "Full";
 });
