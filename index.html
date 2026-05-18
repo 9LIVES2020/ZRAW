@@ -18,15 +18,24 @@
         <img src="ZRAW.png" alt="ZRAW logo" />
         <span>ZRAW</span>
       </a>
+      <nav class="nav" aria-label="Primary">
+        <a href="#work">Work</a>
+        <a href="#process">Process</a>
+        <a href="#qr-maker">QR Maker</a>
+        <a href="#contact">Contact</a>
+      </nav>
+      <button class="sound-toggle" type="button" id="soundToggle" aria-label="Toggle background music" aria-pressed="false">
+        <span class="sound-bars" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </span>
+        <span class="sound-label">Sound</span>
+      </button>
       <button class="menu-toggle" id="menuToggle" type="button" aria-label="Open navigation" aria-expanded="false">
         <span></span>
         <span></span>
       </button>
-      <nav class="nav" aria-label="Primary">
-        <a href="#work">Work</a>
-        <a href="#process">Process</a>
-        <a href="#contact">Contact</a>
-      </nav>
     </header>
 
     <main class="stage" id="stage" tabindex="0">
@@ -89,12 +98,83 @@
         </div>
       </section>
 
+      <section class="panel qr-panel" id="qr-maker" aria-labelledby="qr-title">
+        <div class="section-heading compact">
+          <p class="kicker">QR Maker</p>
+          <h2 id="qr-title">Generate branded QR codes for your links.</h2>
+          <p class="qr-lede">
+            Paste a website, portfolio, social profile, booking page, or contact link.
+            Your QR code is generated in the browser with no upload.
+          </p>
+        </div>
+
+        <div class="qr-tool" aria-label="QR code generator">
+          <label class="qr-field">
+            <span>QR Code Name</span>
+            <input id="qrNameInput" type="text" maxlength="48" placeholder="My Portfolio QR" autocomplete="off" />
+          </label>
+
+          <label class="qr-field">
+            <span>Personal URL</span>
+            <input id="qrUrlInput" type="url" inputmode="url" placeholder="https://yourname.com" autocomplete="off" />
+          </label>
+
+          <button class="button primary qr-generate" type="button" id="qrGenerateBtn">Generate</button>
+
+          <div class="qr-preview" id="qrPreview">
+            <p id="qrEmptyState">Your QR code will appear here.</p>
+            <canvas id="qrCanvas" width="410" height="464" hidden></canvas>
+          </div>
+
+          <div class="qr-actions">
+            <button class="button qr-action-button" id="qrDownloadBtn" type="button" disabled>Download PNG</button>
+            <button class="button qr-action-button" id="qrCopyBtn" type="button" disabled>Copy Image</button>
+          </div>
+
+          <p class="qr-status" id="qrStatus" aria-live="polite"></p>
+        </div>
+      </section>
+
       <section class="panel contact" id="contact" aria-labelledby="contact-title">
-        <div class="contact-card">
-          <img src="ZRAW.png" alt="" />
-          <p class="kicker">Available for new video projects</p>
-          <h2 id="contact-title">Let the next frame feel intentional.</h2>
-          <a class="button primary" href="mailto:hello@zraw.studio">hello@zraw.studio</a>
+        <div class="contact-layout">
+          <div class="contact-card">
+            <img src="ZRAW.png" alt="" />
+            <p class="kicker">Available for new video projects</p>
+            <h2 id="contact-title">Let the next frame feel intentional.</h2>
+
+            <div class="contact-info">
+              <article>
+                <h3>Address</h3>
+                <p>Dasmarinas City, Cavite, Philippines</p>
+              </article>
+              <article>
+                <h3>Email</h3>
+                <a href="mailto:zraw.services@gmail.com">zraw.services@gmail.com</a>
+              </article>
+            </div>
+          </div>
+
+          <form class="contact-form" id="contactForm">
+            <h3>Send us a message</h3>
+            <div class="contact-row">
+              <label>
+                <span>Your name</span>
+                <input id="contactName" name="name" type="text" autocomplete="name" required />
+              </label>
+              <label>
+                <span>Your email</span>
+                <input id="contactEmail" name="email" type="email" autocomplete="email" required />
+              </label>
+            </div>
+            <p class="contact-privacy">Messages are sent through Formspree to ZRAW. Do not include sensitive files or passwords.</p>
+            <label>
+              <span>Your message</span>
+              <textarea id="contactMessage" name="message" rows="5" required></textarea>
+            </label>
+            <input type="hidden" name="_subject" value="New ZRAW website inquiry" />
+            <button class="button primary" type="submit">Send Message</button>
+            <p class="contact-status" id="contactStatus" aria-live="polite"></p>
+          </form>
         </div>
       </section>
     </main>
@@ -103,13 +183,17 @@
       <div class="progress" id="progress"></div>
     </footer>
 
+    <audio id="backgroundMusic" src="audio/zraw-background.mp3" loop preload="auto"></audio>
+
     <aside class="bottom-bar" aria-label="Quick actions">
       <p>Ready for sharp edits, event films, and campaign cuts.</p>
       <div class="bottom-actions">
         <a class="button primary" href="#work">Promo reel</a>
         <a
           class="button ghost"
-          href="mailto:hello@zraw.studio?subject=Quick%20Project%20Message&body=Hi%20ZRAW%2C%20I%20want%20to%20ask%20about%20a%20video%20project."
+          href="https://www.facebook.com/messages/t/110751883917428"
+          target="_blank"
+          rel="noopener"
         >
           Quick message
         </a>
@@ -168,6 +252,7 @@
       </section>
     </div>
 
+    <script src="vendor/qrcode-generator.min.js"></script>
     <script src="script.js"></script>
   </body>
 </html>

@@ -2,6 +2,8 @@ const stage = document.querySelector("#stage");
 const progress = document.querySelector("#progress");
 const topbar = document.querySelector(".topbar");
 const menuToggle = document.querySelector("#menuToggle");
+const backgroundMusic = document.querySelector("#backgroundMusic");
+const soundToggle = document.querySelector("#soundToggle");
 const videoStrip = document.querySelector("#videoStrip");
 const videoPrev = document.querySelector("#videoPrev");
 const videoNext = document.querySelector("#videoNext");
@@ -18,11 +20,31 @@ const fullscreenToggle = document.querySelector("#fullscreenToggle");
 const fullscreenExit = document.querySelector("#fullscreenExit");
 const volumeSlider = document.querySelector("#volumeSlider");
 const qualitySelect = document.querySelector("#qualitySelect");
+const qrNameInput = document.querySelector("#qrNameInput");
+const qrUrlInput = document.querySelector("#qrUrlInput");
+const qrGenerateBtn = document.querySelector("#qrGenerateBtn");
+const qrDownloadBtn = document.querySelector("#qrDownloadBtn");
+const qrCopyBtn = document.querySelector("#qrCopyBtn");
+const qrStatus = document.querySelector("#qrStatus");
+const qrEmptyState = document.querySelector("#qrEmptyState");
+const qrCanvas = document.querySelector("#qrCanvas");
+const contactForm = document.querySelector("#contactForm");
+const contactName = document.querySelector("#contactName");
+const contactEmail = document.querySelector("#contactEmail");
+const contactMessage = document.querySelector("#contactMessage");
+const contactStatus = document.querySelector("#contactStatus");
+const CONTACT_EMAIL = "zraw.services@gmail.com";
+const FORMSPREE_ENDPOINT = "";
+const BACKGROUND_MUSIC_VOLUME = 0.65;
 let activePlayer = "direct";
 let currentVideoIndex = 0;
 let youtubePlaying = false;
 let suppressNextClick = false;
 let previewObserver;
+let userMutedMusic = false;
+let mediaQuiet = false;
+let currentQrUrl = "";
+let currentQrName = "";
 
 // Add each portfolio item here.
 // thumbnail can be a local file such as "thumbnails/video-01.jpg" or a hosted image URL.
@@ -176,6 +198,223 @@ function setupPreviewObserver() {
   });
 
   setPreviewCard(videoStrip.querySelector(".video-card"));
+}
+
+function shouldPlayBackgroundMusic() {
+  return Boolean(backgroundMusic) && !userMutedMusic && !mediaQuiet;
+}
+
+function updateSoundToggle() {
+  if (!soundToggle) return;
+
+  const isPausedByPage = !userMutedMusic && !shouldPlayBackgroundMusic();
+  const isWaitingForClick = !userMutedMusic && shouldPlayBackgroundMusic() && backgroundMusic?.paused;
+
+  soundToggle.classList.toggle("is-muted", userMutedMusic);
+  soundToggle.classList.toggle("is-paused", isPausedByPage || isWaitingForClick);
+  soundToggle.setAttribute("aria-pressed", String(!userMutedMusic));
+  soundToggle.querySelector(".sound-label").textContent = userMutedMusic
+    ? "Muted"
+    : isWaitingForClick
+      ? "Play"
+      : isPausedByPage
+        ? "Paused"
+        : "Sound";
+}
+
+function syncBackgroundMusic() {
+  if (!backgroundMusic) return;
+
+  backgroundMusic.volume = BACKGROUND_MUSIC_VOLUME;
+
+  if (!shouldPlayBackgroundMusic()) {
+    backgroundMusic.pause();
+    updateSoundToggle();
+    return;
+  }
+
+  backgroundMusic.play().catch(() => {
+    updateSoundToggle();
+  });
+  updateSoundToggle();
+}
+
+function setQrStatus(message, isError = false) {
+  if (!qrStatus) return;
+  qrStatus.textContent = message;
+  qrStatus.classList.toggle("is-error", isError);
+}
+
+function normalizeQrName(value) {
+  const name = value.trim().replace(/\s+/g, " ");
+  if (!name) throw new Error("Enter a QR code name first.");
+  if (name.length > 48) throw new Error("Keep the QR code name under 48 characters.");
+  return name;
+}
+
+function normalizeQrUrl(value) {
+  const trimmed = value.trim();
+  if (!trimmed) throw new Error("Enter a web URL first.");
+
+  const candidate = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  let url;
+  try {
+    url = new URL(candidate);
+  } catch {
+    throw new Error("That does not look like a valid web URL.");
+  }
+
+  if (!["http:", "https:"].includes(url.protocol)) {
+    throw new Error("Only http:// or https:// links are supported.");
+  }
+
+  if (!url.hostname.includes(".") && url.hostname !== "localhost") {
+    throw new Error("Use a complete URL, like https://yourname.com.");
+  }
+
+  if (new TextEncoder().encode(url.href).length > 600) {
+    throw new Error("That URL is too long. Try a shorter link.");
+  }
+
+  return url.href;
+}
+
+function drawRoundedRect(ctx, x, y, width, height, radius) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+}
+
+function drawFittedQrText(ctx, text, x, y, maxWidth) {
+  let size = 21;
+  do {
+    ctx.font = `800 ${size}px Inter, ui-sans-serif, system-ui, sans-serif`;
+    if (ctx.measureText(text).width <= maxWidth) break;
+    size -= 1;
+  } while (size >= 12);
+  ctx.fillText(text, x, y);
+}
+
+async function drawQrLogo(ctx, qrSize, qrTop) {
+  const logo = new Image();
+  logo.src = "ZRAW.png";
+
+  try {
+    await logo.decode();
+  } catch {
+    return;
+  }
+
+  const badgeSize = 58;
+  const pad = 7;
+  const x = (qrSize - badgeSize) / 2;
+  const y = qrTop + (qrSize - badgeSize) / 2;
+
+  ctx.save();
+  drawRoundedRect(ctx, x, y, badgeSize, badgeSize, 12);
+  ctx.fillStyle = "#fff";
+  ctx.fill();
+  drawRoundedRect(ctx, x + pad, y + pad, badgeSize - pad * 2, badgeSize - pad * 2, 8);
+  ctx.fillStyle = "#000";
+  ctx.fill();
+  ctx.clip();
+  ctx.drawImage(logo, x + pad, y + pad, badgeSize - pad * 2, badgeSize - pad * 2);
+  ctx.restore();
+}
+
+async function renderQrCode(url, qrName) {
+  if (!qrCanvas || typeof qrcode !== "function") {
+    throw new Error("QR library is not ready yet. Refresh and try again.");
+  }
+
+  const qr = qrcode(0, "H");
+  qr.addData(url, "Byte");
+  qr.make();
+
+  const ctx = qrCanvas.getContext("2d");
+  const moduleCount = qr.getModuleCount();
+  const scale = Math.max(5, Math.floor(360 / moduleCount));
+  const quiet = 4;
+  const titleArea = 46;
+  const captionArea = 28;
+  const qrSize = (moduleCount + quiet * 2) * scale;
+
+  qrCanvas.width = qrSize;
+  qrCanvas.height = titleArea + qrSize + captionArea;
+
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, qrCanvas.width, qrCanvas.height);
+  ctx.fillStyle = "#111";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  drawFittedQrText(ctx, qrName, qrCanvas.width / 2, 24, qrCanvas.width - 38);
+
+  for (let row = 0; row < moduleCount; row += 1) {
+    for (let col = 0; col < moduleCount; col += 1) {
+      if (qr.isDark(row, col)) {
+        ctx.fillRect((col + quiet) * scale, titleArea + (row + quiet) * scale, scale, scale);
+      }
+    }
+  }
+
+  await drawQrLogo(ctx, qrSize, titleArea);
+
+  ctx.fillStyle = "#777";
+  ctx.font = "italic 400 12px Inter, ui-sans-serif, system-ui, sans-serif";
+  ctx.fillText("ZRAW QR Code Generator 2026", qrCanvas.width / 2, titleArea + qrSize + 12);
+
+  qrCanvas.hidden = false;
+  if (qrEmptyState) qrEmptyState.hidden = true;
+}
+
+async function generateQrCode() {
+  try {
+    const qrName = normalizeQrName(qrNameInput?.value || "");
+    const url = normalizeQrUrl(qrUrlInput?.value || "");
+
+    currentQrName = qrName;
+    currentQrUrl = url;
+    if (qrNameInput) qrNameInput.value = qrName;
+    if (qrUrlInput) qrUrlInput.value = url;
+
+    await renderQrCode(url, qrName);
+    if (qrDownloadBtn) qrDownloadBtn.disabled = false;
+    if (qrCopyBtn) qrCopyBtn.disabled = !navigator.clipboard || !window.ClipboardItem;
+    setQrStatus("QR code ready.");
+  } catch (error) {
+    currentQrName = "";
+    currentQrUrl = "";
+    if (qrCanvas) qrCanvas.hidden = true;
+    if (qrEmptyState) qrEmptyState.hidden = false;
+    if (qrDownloadBtn) qrDownloadBtn.disabled = true;
+    if (qrCopyBtn) qrCopyBtn.disabled = true;
+    setQrStatus(error.message, true);
+  }
+}
+
+function clearQrIfIncomplete() {
+  if (qrNameInput?.value.trim() && qrUrlInput?.value.trim()) return;
+  currentQrName = "";
+  currentQrUrl = "";
+  if (qrCanvas) qrCanvas.hidden = true;
+  if (qrEmptyState) qrEmptyState.hidden = false;
+  if (qrDownloadBtn) qrDownloadBtn.disabled = true;
+  if (qrCopyBtn) qrCopyBtn.disabled = true;
+  setQrStatus("");
+}
+
+function setContactStatus(message, isError = false) {
+  if (!contactStatus) return;
+  contactStatus.textContent = message;
+  contactStatus.classList.toggle("is-error", isError);
 }
 
 function scrollToVideo(index) {
@@ -361,6 +600,8 @@ function loadVideo(video) {
 
 function openPlayer(video, index = currentVideoIndex) {
   currentVideoIndex = index;
+  mediaQuiet = true;
+  syncBackgroundMusic();
   loadVideo(video);
   playerShell.classList.add("is-open");
   playerShell.setAttribute("aria-hidden", "false");
@@ -376,6 +617,8 @@ function closePlayer() {
   drivePlayer.removeAttribute("src");
   activePlayer = "direct";
   youtubePlaying = false;
+  mediaQuiet = false;
+  syncBackgroundMusic();
   playToggle.textContent = "Play";
 }
 
@@ -435,11 +678,97 @@ function toggleFullscreen() {
 }
 
 renderVideos();
+syncBackgroundMusic();
+
+backgroundMusic?.addEventListener("play", updateSoundToggle);
+backgroundMusic?.addEventListener("pause", updateSoundToggle);
+backgroundMusic?.addEventListener("volumechange", updateSoundToggle);
+
+["pointerdown", "keydown"].forEach((eventName) => {
+  window.addEventListener(eventName, syncBackgroundMusic, { once: true, passive: true });
+});
 
 menuToggle?.addEventListener("click", () => {
   const willOpen = menuToggle.getAttribute("aria-expanded") !== "true";
   menuToggle.setAttribute("aria-expanded", String(willOpen));
   topbar?.classList.toggle("is-open", willOpen);
+});
+
+soundToggle?.addEventListener("click", () => {
+  if (!backgroundMusic) return;
+
+  if (userMutedMusic) {
+    userMutedMusic = false;
+    syncBackgroundMusic();
+    return;
+  }
+
+  if (backgroundMusic.paused && shouldPlayBackgroundMusic()) {
+    syncBackgroundMusic();
+    return;
+  }
+
+  userMutedMusic = !userMutedMusic;
+  syncBackgroundMusic();
+});
+
+qrGenerateBtn?.addEventListener("click", generateQrCode);
+
+[qrNameInput, qrUrlInput].forEach((field) => {
+  field?.addEventListener("input", clearQrIfIncomplete);
+  field?.addEventListener("focus", () => {
+    if (field.value.trim()) requestAnimationFrame(() => field.select());
+  });
+  field?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") generateQrCode();
+  });
+});
+
+qrDownloadBtn?.addEventListener("click", () => {
+  if (!qrCanvas || !currentQrUrl) return;
+  const link = document.createElement("a");
+  const host = new URL(currentQrUrl).hostname.replace(/^www\./, "");
+  const label = currentQrName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  link.download = `${label || host}-qr-code.png`;
+  link.href = qrCanvas.toDataURL("image/png");
+  link.click();
+});
+
+qrCopyBtn?.addEventListener("click", async () => {
+  if (!qrCanvas) return;
+
+  try {
+    const blob = await new Promise((resolve) => qrCanvas.toBlob(resolve, "image/png"));
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+    setQrStatus("QR image copied.");
+  } catch {
+    setQrStatus("Copy is not available in this browser. Download still works.", true);
+  }
+});
+
+contactForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const name = contactName?.value.trim() || "";
+  const email = contactEmail?.value.trim() || "";
+  const message = contactMessage?.value.trim() || "";
+
+  if (!name || !email || !message) {
+    setContactStatus("Please complete your name, email, and message.", true);
+    return;
+  }
+
+  const subject = `ZRAW project inquiry from ${name}`;
+  const body = [
+    `Name: ${name}`,
+    `Email: ${email}`,
+    "",
+    "Message:",
+    message,
+  ].join("\n");
+
+  window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  setContactStatus("Opening your email app...");
 });
 
 document.querySelectorAll(".nav a").forEach((link) => {
@@ -578,6 +907,8 @@ fullscreenExit?.addEventListener("click", () => {
 featureVideo?.addEventListener("error", fallbackToDriveEmbed);
 
 featureVideo?.addEventListener("play", () => {
+  mediaQuiet = true;
+  syncBackgroundMusic();
   playToggle.textContent = "Pause";
 });
 
