@@ -34,7 +34,7 @@ const contactEmail = document.querySelector("#contactEmail");
 const contactMessage = document.querySelector("#contactMessage");
 const contactStatus = document.querySelector("#contactStatus");
 const CONTACT_EMAIL = "zraw.services@gmail.com";
-const FORMSPREE_ENDPOINT = "";
+const FORMSPREE_ENDPOINT = "https://formspree.io/f/xaqkydoe";
 const BACKGROUND_MUSIC_VOLUME = 0.65;
 let activePlayer = "direct";
 let currentVideoIndex = 0;
@@ -746,29 +746,44 @@ qrCopyBtn?.addEventListener("click", async () => {
   }
 });
 
-contactForm?.addEventListener("submit", (event) => {
+contactForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const name = contactName?.value.trim() || "";
   const email = contactEmail?.value.trim() || "";
   const message = contactMessage?.value.trim() || "";
+  const endpoint = contactForm.dataset.formspreeEndpoint || FORMSPREE_ENDPOINT;
 
   if (!name || !email || !message) {
     setContactStatus("Please complete your name, email, and message.", true);
     return;
   }
 
-  const subject = `ZRAW project inquiry from ${name}`;
-  const body = [
-    `Name: ${name}`,
-    `Email: ${email}`,
-    "",
-    "Message:",
-    message,
-  ].join("\n");
+  if (!endpoint) {
+    setContactStatus("Formspree is not connected yet. Add your Formspree endpoint first.", true);
+    return;
+  }
 
-  window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  setContactStatus("Opening your email app...");
+  setContactStatus("Sending...");
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+      },
+      body: new FormData(contactForm),
+    });
+
+    if (!response.ok) {
+      throw new Error("Message failed.");
+    }
+
+    contactForm.reset();
+    setContactStatus("Message sent. Thank you.");
+  } catch {
+    setContactStatus("Message could not send. Please try again later.", true);
+  }
 });
 
 document.querySelectorAll(".nav a").forEach((link) => {
