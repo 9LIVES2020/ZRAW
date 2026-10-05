@@ -219,8 +219,8 @@ h1 {
 h2 {
   max-width: 920px;
   margin-bottom: 0;
-  font-size: 20px;
-  line-height: 0.96;
+  font-size: 12px;
+  line-height: 2;
 }
 
 h3 {
