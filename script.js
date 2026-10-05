@@ -35,7 +35,7 @@ const contactMessage = document.querySelector("#contactMessage");
 const contactStatus = document.querySelector("#contactStatus");
 const CONTACT_EMAIL = "zraw.services@gmail.com";
 const FORMSPREE_ENDPOINT = "https://formspree.io/f/xaqkydoe";
-const BACKGROUND_MUSIC_VOLUME = 0.65;
+const BACKGROUND_MUSIC_VOLUME = 0.30;
 let activePlayer = "direct";
 let currentVideoIndex = 0;
 let youtubePlaying = false;
@@ -52,57 +52,55 @@ let currentQrName = "";
 // Leave thumbnail blank to use Google Drive's generated thumbnail.
 const videos = [
   {
-    title: "ZRAW Cut 01",
-    category: "Edit Reel",
+    title: "LIAN SHANE",
+    category: "PREDEBUT",
     year: "2026",
-    youtubeId: "uFJPprYX3gw",
-    driveId: "",
+    driveId: "1WqC_G3ucdsaOzmi63YNGZTv9mFEtunN7",
+    previewVideo: "thumbnails/1-thumbnail.mp4",
     thumbnail: "",
     preview: "",
-    sources: {
-      "1080p": "",
-      "720p": "",
-    },
+    sources: { "1080p": "", "720p": "" },
   },
   {
-    title: "ZRAW Cut 02",
-    category: "Commercial",
+    title: "KIM & ARLYN",
+    category: "PRENUP",
     year: "2026",
-    driveId: "1hFof8Tl1nU7YVeP6VtE7xfk2IFYkYZiB",
-    thumbnail: "thumbnails/zraw-cut-02-thumb.jpg",
-    preview: "thumbnails/zraw-cut-02-preview.gif",
-    sources: {
-      "1080p": "",
-      "720p": "",
-    },
-  },
-  {
-    title: "ZRAW Cut 03",
-    category: "Event Film",
-    year: "2026",
-    driveId: "1xuLg3pyY5XQe7w8aluM4gO5TLGxsxhsn",
+    driveId: "1kmXrSjKaC8x8QdiTM-2ENvLjD88cgQdt",
+    previewVideo: "thumbnails/2-thumbnail.mp4",
     thumbnail: "",
     preview: "",
-    sources: {
-      "1080p": "",
-      "720p": "",
-    },
+    sources: { "1080p": "", "720p": "" },
   },
-  ...Array.from({ length: 21 }, (_, index) => {
-    const number = index + 4;
-    return {
-      title: `ZRAW Cut ${String(number).padStart(2, "0")}`,
-      category: number % 3 === 0 ? "Event Film" : number % 2 === 0 ? "Commercial" : "Edit Reel",
-      year: "2026",
-      driveId: "",
-      thumbnail: "",
-      preview: "",
-      sources: {
-        "1080p": "",
-        "720p": "",
-      },
-    };
-  }),
+  {
+    title: "PHILLIP & JANA",
+    category: "WEDDING",
+    year: "2026",
+    driveId: "1VAycwNiYYnfjIFPGlbGsXy0Yb7-u5-3N",
+    previewVideo: "thumbnails/3-thumbnail.mp4",
+    thumbnail: "",
+    preview: "",
+    sources: { "1080p": "", "720p": "" },
+  },
+  {
+    title: "EDWIN & GHEN",
+    category: "WEDDING",
+    year: "2026",
+    driveId: "15NwI0IQO-j57AtV4Moqu5zQvuzpnW6IW",
+    previewVideo: "thumbnails/4-thumbnail.mp4",
+    thumbnail: "",
+    preview: "",
+    sources: { "1080p": "", "720p": "" },
+  },
+  {
+    title: "DIWATA NATURE RESORT",
+    category: "COMMERCIAL",
+    year: "2026",
+    driveId: "1ms6V4JpfyaaOmx-z8UKxdwzvp8K0YUmC",
+    previewVideo: "thumbnails/5-thumbnail.mp4",
+    thumbnail: "",
+    preview: "",
+    sources: { "1080p": "", "720p": "" },
+  },
 ];
 
 function driveVideoUrl(fileId) {
@@ -552,6 +550,65 @@ function renderVideos() {
     })
     .join("");
   setupPreviewObserver();
+  setupVideoThumbnails();
+}
+
+// Use previewVideo for MP4 thumbnails; preview remains available for GIFs.
+function setupVideoThumbnails() {
+  videoStrip.querySelectorAll(".video-card").forEach((card, index) => {
+    const source = videos[index].previewVideo;
+    if (!source) return;
+    const preview = document.createElement("video");
+    preview.className = "video-thumbnail";
+    preview.muted = true;
+    preview.defaultMuted = true;
+    preview.loop = true;
+    preview.playsInline = true;
+    preview.preload = "metadata";
+    preview.setAttribute("aria-hidden", "true");
+    preview.setAttribute("tabindex", "-1");
+    preview.addEventListener("loadeddata", () => preview.classList.add("is-ready"));
+    preview.addEventListener("error", () => preview.classList.remove("is-ready"));
+    preview.src = source;
+    card.prepend(preview);
+
+    let visible = false;
+    let hovered = false;
+    const sync = () => {
+      if (hovered && visible && !document.hidden && !document.body.classList.contains("player-open")) {
+        preview.play().catch(() => {});
+      } else {
+        preview.pause();
+        if (preview.readyState > 0) preview.currentTime = 0;
+      }
+    };
+    if ("IntersectionObserver" in window) {
+      const observer = new IntersectionObserver(([entry]) => {
+        visible = entry.isIntersecting;
+        sync();
+      }, { threshold: 0.15 });
+      observer.observe(card);
+    } else {
+      visible = true;
+      sync();
+    }
+    document.addEventListener("visibilitychange", sync);
+    new MutationObserver(sync).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    card.addEventListener("pointerenter", (event) => {
+      if (event.pointerType === "touch") return;
+      hovered = true;
+      sync();
+    });
+    card.addEventListener("pointerleave", () => {
+      hovered = false;
+      sync();
+    });
+    card.addEventListener("pointercancel", () => {
+      hovered = false;
+      sync();
+    });
+
+  });
 }
 
 function loadVideo(video) {

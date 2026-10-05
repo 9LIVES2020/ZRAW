@@ -196,7 +196,7 @@ body::before {
 .kicker {
   margin: 0 0 16px;
   color: var(--red-hot);
-  font-size: 12px;
+  font-size: 30px;
   font-weight: 800;
   letter-spacing: 0;
   text-transform: uppercase;
@@ -219,7 +219,7 @@ h1 {
 h2 {
   max-width: 920px;
   margin-bottom: 0;
-  font-size: 70px;
+  font-size: 20px;
   line-height: 0.96;
 }
 
@@ -1343,3 +1343,18 @@ h3 {
     padding-inline: 10px;
   }
 }
+
+/* Silent MP4 previews sit above the still image, beneath the text gradient. */
+.video-card > .video-thumbnail {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+}
+.video-card:hover > .video-thumbnail.is-ready { opacity: 0.9; }
+.video-card::before { z-index: 2; pointer-events: none; }
+.video-card > .video-meta { z-index: 3; }
