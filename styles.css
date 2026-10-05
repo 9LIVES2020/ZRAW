@@ -219,8 +219,8 @@ h1 {
 h2 {
   max-width: 920px;
   margin-bottom: 0;
-  font-size: 12px;
-  line-height: 2;
+  font-size: 20px;
+  line-height: 0.96;
 }
 
 h3 {
@@ -230,6 +230,7 @@ h3 {
 }
 
 .hero-copy > p:not(.kicker),
+.work-description,
 .service-list p {
   color: var(--muted);
   font-size: 19px;
@@ -1175,6 +1176,7 @@ h3 {
   }
 
   .hero-copy > p:not(.kicker),
+.work-description,
   .service-list p {
     font-size: 16px;
   }
@@ -1355,6 +1357,39 @@ h3 {
   z-index: 1;
   opacity: 0;
 }
-.video-card:hover > .video-thumbnail.is-ready { opacity: 0.9; }
+.video-card:hover > .video-thumbnail.is-ready,
+.video-card.is-touch-preview > .video-thumbnail.is-ready { opacity: 0.9; }
 .video-card::before { z-index: 2; pointer-events: none; }
 .video-card > .video-meta { z-index: 3; }
+/* Match the work introduction to the hero typography. */
+.reel-panel .section-heading { max-width: 650px; }
+.reel-panel .section-heading > .kicker {
+  font-size: 30px;
+  line-height: normal;
+  overflow-wrap: anywhere;
+}
+.work-description {
+  font-weight: 400;
+  margin-bottom: 0;
+}
+@media (hover: none) {
+  .video-card:not(.is-touch-preview) > .video-thumbnail.is-ready { opacity: 0; }
+  .video-card.is-touch-preview::before {
+    content: "Tap again to watch";
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 16px;
+    color: var(--white);
+    font-size: 14px;
+    font-weight: 600;
+  }
+}
+/* Keep the brand line intact; JavaScript fits it to the available width. */
+.reel-panel .section-heading { min-width: 0; width: 100%; }
+#work-title {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  font-size: min(30px, 5vw);
+}
+#work-title .brand-white { color: #fff; }

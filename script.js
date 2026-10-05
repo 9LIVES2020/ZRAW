@@ -39,7 +39,7 @@ const BACKGROUND_MUSIC_VOLUME = 0.30;
 let activePlayer = "direct";
 let currentVideoIndex = 0;
 let youtubePlaying = false;
-let suppressNextClick = false;
+
 let previewObserver;
 let userMutedMusic = false;
 let mediaQuiet = false;
@@ -521,8 +521,12 @@ function directEntriesFor(video) {
 
 function syncProgress() {
   if (!stage || !progress) return;
-  const max = stage.scrollWidth - stage.clientWidth;
-  progress.style.width = max <= 0 ? "0%" : `${(stage.scrollLeft / max) * 100}%`;
+  const mobile = window.matchMedia("(max-width: 900px)").matches;
+  const max = mobile
+    ? document.documentElement.scrollHeight - window.innerHeight
+    : stage.scrollWidth - stage.clientWidth;
+  const position = mobile ? window.scrollY : stage.scrollLeft;
+  progress.style.width = max <= 0 ? "0%" : `${Math.max(0, Math.min(100, position / max * 100))}%`;
 }
 
 function renderVideos() {
@@ -575,7 +579,7 @@ function setupVideoThumbnails() {
     let visible = false;
     let hovered = false;
     const sync = () => {
-      if (hovered && visible && !document.hidden && !document.body.classList.contains("player-open")) {
+      if ((hovered || card.classList.contains("is-touch-preview")) && visible && !document.hidden && !document.body.classList.contains("player-open")) {
         preview.play().catch(() => {});
       } else {
         preview.pause();
@@ -585,6 +589,7 @@ function setupVideoThumbnails() {
     if ("IntersectionObserver" in window) {
       const observer = new IntersectionObserver(([entry]) => {
         visible = entry.isIntersecting;
+        if (!visible) card.classList.remove("is-touch-preview");
         sync();
       }, { threshold: 0.15 });
       observer.observe(card);
@@ -592,7 +597,11 @@ function setupVideoThumbnails() {
       visible = true;
       sync();
     }
-    document.addEventListener("visibilitychange", sync);
+    document.addEventListener("thumbnailpreviewchange", sync);
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) card.classList.remove("is-touch-preview");
+      sync();
+    });
     new MutationObserver(sync).observe(document.body, { attributes: true, attributeFilter: ["class"] });
     card.addEventListener("pointerenter", (event) => {
       if (event.pointerType === "touch") return;
@@ -878,7 +887,9 @@ if (stage) {
   let pointerMoved = false;
 
   stage.addEventListener("pointerdown", (event) => {
-    if (event.target.closest("button, a, input, select")) return;
+    if (event.pointerType !== "mouse" || event.button !== 0) return;
+    if (window.matchMedia("(max-width: 900px)").matches) return;
+    if (event.target.closest("button, a, input, select, textarea, .video-strip")) return;
     if (event.target.closest(".video-card")) return;
     isDown = true;
     startX = event.pageX;
@@ -895,17 +906,13 @@ if (stage) {
     stage.scrollLeft = scrollLeft - (event.pageX - startX);
   });
 
-  stage.addEventListener("pointerup", (event) => {
-    const card = event.target.closest("[data-video-index]");
-    if (card && !pointerMoved) {
-      const index = Number(card.dataset.videoIndex);
-      openPlayer(videos[index], index);
-      suppressNextClick = true;
-    }
-    isDown = false;
-  });
+  const endDrag = () => { isDown = false; };
+  stage.addEventListener("pointerup", endDrag);
+  stage.addEventListener("pointercancel", endDrag);
+  stage.addEventListener("lostpointercapture", endDrag);
 
   stage.addEventListener("scroll", syncProgress);
+  window.addEventListener("scroll", syncProgress, { passive: true });
   window.addEventListener("resize", syncProgress);
   syncProgress();
 }
@@ -918,16 +925,37 @@ videoNext?.addEventListener("click", () => {
   scrollToVideo(activeVideoIndex() + 1);
 });
 
+function clearTouchPreviews() {
+  videoStrip?.querySelectorAll(".is-touch-preview").forEach((card) => {
+    card.classList.remove("is-touch-preview");
+    card.setAttribute("aria-label", `Preview ${videos[Number(card.dataset.videoIndex)].title}; tap again to open`);
+  });
+  document.dispatchEvent(new Event("thumbnailpreviewchange"));
+}
+let thumbnailPointerType = "mouse";
+videoStrip?.addEventListener("pointerdown", (event) => {
+  thumbnailPointerType = event.pointerType;
+});
+document.addEventListener("pointerdown", (event) => {
+  if (!event.target.closest(".video-card")) clearTouchPreviews();
+});
 videoStrip?.addEventListener("click", (event) => {
   event.preventDefault();
   event.stopPropagation();
-  if (suppressNextClick) {
-    suppressNextClick = false;
-    return;
-  }
+
   const button = event.target.closest("[data-video-index]");
   if (!button) return;
   const index = Number(button.dataset.videoIndex);
+  if (event.detail !== 0 && thumbnailPointerType === "touch" && videos[index].previewVideo) {
+    if (!button.classList.contains("is-touch-preview")) {
+      clearTouchPreviews();
+      button.classList.add("is-touch-preview");
+      button.setAttribute("aria-label", `Open ${videos[index].title}`);
+      document.dispatchEvent(new Event("thumbnailpreviewchange"));
+      return;
+    }
+  }
+  clearTouchPreviews();
   openPlayer(videos[index], index);
 });
 
@@ -1024,3 +1052,25 @@ window.addEventListener("keydown", (event) => {
 document.addEventListener("fullscreenchange", () => {
   fullscreenToggle.textContent = document.fullscreenElement ? "Exit" : "Full";
 });
+
+// Measure the actual font so the entire brand heading fits at every width.
+function fitWorkHeading() {
+  const heading = document.querySelector("#work-title");
+  if (!heading || !heading.parentElement) return;
+  const available = heading.parentElement.clientWidth;
+  if (!available) return;
+  heading.style.fontSize = "30px";
+  const range = document.createRange();
+  range.selectNodeContents(heading);
+  const naturalWidth = range.getBoundingClientRect().width;
+  if (naturalWidth > available) {
+    heading.style.fontSize = `${Math.floor(30 * (available - 1) / naturalWidth * 100) / 100}px`;
+  }
+}
+fitWorkHeading();
+window.addEventListener("resize", fitWorkHeading);
+if (document.fonts) document.fonts.ready.then(fitWorkHeading);
+if ("ResizeObserver" in window) {
+  const workHeadingContainer = document.querySelector("#work-title")?.parentElement;
+  if (workHeadingContainer) new ResizeObserver(fitWorkHeading).observe(workHeadingContainer);
+}
