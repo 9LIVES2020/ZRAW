@@ -43,11 +43,11 @@
       if (!response.ok) throw new Error("Visitor counter unavailable");
       const { count } = await response.json();
       if (!Number.isSafeInteger(count) || count < 0) throw new Error("Invalid count");
-      // Keep at least five digits; never truncate the total once it grows.
-      counter.textContent = String(count).padStart(5, "0");
+      // Keep at least nine digits; never truncate the total once it grows.
+      counter.textContent = String(count).padStart(9, "0");
       counter.setAttribute("aria-label", `${count} unique visitors since October 7, 2026`);
     } catch {
-      counter.textContent = "-----";
+      counter.textContent = "---------";
       counter.setAttribute("aria-label", "Visitor count temporarily unavailable");
       counter.title = "Visitor count temporarily unavailable";
     }

@@ -41,7 +41,7 @@
   line-height: 1.2;
 }
 
-#visitorCount { min-width: 5ch; }
+#visitorCount { min-width: 9ch; }
 
 @media (max-width: 900px) {
   .bottom-bar {
