@@ -418,7 +418,7 @@ h3 {
     linear-gradient(#000, #000);
   background-position: center;
   background-size: cover;
-  opacity: 0.9;
+  opacity: 1;
   transition: transform 500ms ease;
 }
 
@@ -1358,7 +1358,7 @@ h3 {
   opacity: 0;
 }
 .video-card:hover > .video-thumbnail.is-ready,
-.video-card.is-touch-preview > .video-thumbnail.is-ready { opacity: 0.9; }
+.video-card.is-touch-preview > .video-thumbnail.is-ready { opacity: 1; }
 .video-card::before { z-index: 2; pointer-events: none; }
 .video-card > .video-meta { z-index: 3; }
 /* Match the work introduction to the hero typography. */
