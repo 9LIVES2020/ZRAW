@@ -1500,3 +1500,24 @@ body.player-open { overflow: hidden; }
   .zcomms-grid { grid-template-columns: 1fr; }
 }
 
+
+/* Keep the app overview within a typical desktop viewport. */
+@media (min-width: 901px) {
+  .zcomms-panel { padding-top: 90px; padding-bottom: 94px; }
+  .zcomms-layout { gap: 28px; }
+  #zcomms-title { font-size: 42px; margin-bottom: 12px; }
+  .zcomms-offers > .kicker { font-size: 10px; margin-bottom: 6px; }
+  .zcomms-card { padding: 12px 16px; }
+  .zcomms-card h3,.zcomms-card h4 { font-size: 18px; margin: 6px 0; }
+  .zcomms-card p { font-size: 12px; line-height: 1.4; margin-bottom: 8px; }
+  .zcomms-benefits { font-size: 12px; line-height: 1.4; margin-bottom: 8px; }
+  .zcomms-benefits li+li { margin-top: 4px; }
+  .zcomms-card .button { min-height: 36px; padding: 8px 12px; font-size: 12px; }
+  .zcomms-access-title { font-size: 16px; margin: 12px 0 8px; }
+  .zcomms-grid { gap: 12px; }
+  .zcomms-invite { font-size: 11px; padding: 4px 0; }
+  .zcomms-media > h3 { font-size: 20px; margin-top: 14px !important; }
+  .zcomms-lede { font-size: 13px; line-height: 1.45; margin-top: 10px; }
+  .zcomms-lede:last-child { font-size: 11px !important; line-height: 1.4; }
+}
+
