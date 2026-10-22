@@ -865,6 +865,7 @@ if (stage) {
     (event) => {
       if (document.body.classList.contains("player-open")) return;
       if (window.matchMedia("(max-width: 900px)").matches) return;
+      if (event.target.closest(".zcomms-panel") && Math.abs(event.deltaY) >= Math.abs(event.deltaX)) return;
       event.preventDefault();
       if (event.target.closest(".video-strip")) {
         videoStrip.scrollBy({
@@ -889,7 +890,7 @@ if (stage) {
   stage.addEventListener("pointerdown", (event) => {
     if (event.pointerType !== "mouse" || event.button !== 0) return;
     if (window.matchMedia("(max-width: 900px)").matches) return;
-    if (event.target.closest("button, a, input, select, textarea, .video-strip")) return;
+    if (event.target.closest("button, a, input, select, textarea, .video-strip, .zcomms-panel")) return;
     if (event.target.closest(".video-card")) return;
     isDown = true;
     startX = event.pageX;
@@ -1074,3 +1075,4 @@ if ("ResizeObserver" in window) {
   const workHeadingContainer = document.querySelector("#work-title")?.parentElement;
   if (workHeadingContainer) new ResizeObserver(fitWorkHeading).observe(workHeadingContainer);
 }
+
