@@ -1,5 +1,8 @@
 {
   "version": 1,
-  "include": ["/api/visitors"],
+  "include": [
+    "/api/visitors",
+    "/api/purchase-request"
+  ],
   "exclude": []
 }
