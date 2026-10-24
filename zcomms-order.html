@@ -31,6 +31,7 @@
 <input type="hidden" name="_subject" value="Z-COMMS Bundle Purchase Request">
 <input type="hidden" name="message" value="Purchase request: Z-COMMS Windows + Android bundle. Price: PHP 1,500. License: up to 5 registered devices, with up to 2 registered devices in use simultaneously. Please reply with the Terms and Conditions and payment instructions. No payment has been made on this page.">
 <p class="note">Your name and email will be sent through Formspree to ZRAW to handle your purchase request. We will reply to the email you provide with terms and payment instructions.</p>
+<p class="note" id="requestLimit">Up to 10 requests per day, with 1 minute between requests. Resets at midnight GMT+8.</p>
 <button class="email-order" type="submit">Send purchase request</button>
 <p class="note" id="purchaseStatus" role="status" aria-live="polite"></p>
 <p class="note">No payment is collected here. You can also contact <a href="mailto:zraw.services@gmail.com">zraw.services@gmail.com</a>.</p>
@@ -38,24 +39,65 @@
 </section></div><a class="back" href="index.html#z-comms">&#8592; Back to Z-COMMS</a></main><script>
 const purchaseForm = document.getElementById('purchaseForm');
 const purchaseStatus = document.getElementById('purchaseStatus');
-purchaseForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const button = purchaseForm.querySelector('button');
-  if (button.disabled) return;
-  const name = purchaseForm.elements.name;
-  if (!name.value.trim()) { name.setCustomValidity('Please enter your name.'); name.reportValidity(); return; }
-  button.disabled = true;
+const button = purchaseForm.querySelector('button');
+const limitText = document.getElementById('requestLimit');
+const storageKey = 'zcomms-purchase-limits-v1';
+let sending = false;
+function dayKey(now) { return new Date(now + 8 * 3600000).toISOString().slice(0, 10); }
+function readLimits(now = Date.now()) {
+  const raw = JSON.parse(localStorage.getItem(storageKey) || '{}');
+  return { day: dayKey(now), count: raw.day === dayKey(now) && Number.isInteger(raw.count) ? Math.max(0, raw.count) : 0, next: Number.isFinite(raw.next) ? raw.next : 0 };
+}
+function refreshLimits() {
+  try {
+    const limits = readLimits();
+    const seconds = Math.max(0, Math.ceil((limits.next - Date.now()) / 1000));
+    button.disabled = sending || limits.count >= 10 || seconds > 0;
+    button.textContent = sending ? 'Sending…' : limits.count >= 10 ? 'Daily limit reached' : seconds ? 'Try again in ' + seconds + 's' : 'Send purchase request';
+    limitText.textContent = limits.count >= 10 ? '10 of 10 requests sent today. Requests reopen at midnight GMT+8.' : limits.count + ' of 10 requests sent today. Please wait 1 minute between requests. Resets at midnight GMT+8.';
+  } catch {
+    button.disabled = true;
+    limitText.textContent = 'Please enable browser storage to send a request, or contact us by email.';
+  }
+}
+async function sendRequest() {
+  const now = Date.now();
+  let limits;
+  try {
+    limits = readLimits(now);
+    if (limits.count >= 10 || limits.next > now) { refreshLimits(); return; }
+    limits.next = now + 60000;
+    localStorage.setItem(storageKey, JSON.stringify(limits));
+  } catch { refreshLimits(); return; }
+  sending = true;
+  refreshLimits();
   purchaseStatus.textContent = 'Sending your request…';
   try {
     const response = await fetch(purchaseForm.action, {method: 'POST', headers: {Accept: 'application/json'}, body: new FormData(purchaseForm)});
     if (!response.ok) throw new Error('Request not accepted');
+    const current = readLimits();
+    current.count += 1;
+    current.next = Math.max(current.next, Date.now() + 60000);
+    localStorage.setItem(storageKey, JSON.stringify(current));
     purchaseForm.reset();
     purchaseStatus.textContent = 'Request sent. ZRAW will reply by email with terms and payment instructions. No payment has been taken.';
   } catch {
-    purchaseStatus.textContent = 'We could not confirm your request was sent. Please try again, or email zraw.services@gmail.com. Your details are still here.';
-  } finally { button.disabled = false; }
+    purchaseStatus.textContent = 'We could not confirm your request was sent. Please wait for the cooldown before retrying, or email zraw.services@gmail.com. Your details are still here.';
+  } finally { sending = false; refreshLimits(); }
+}
+purchaseForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (sending) return;
+  const name = purchaseForm.elements.name;
+  if (!name.value.trim()) { name.setCustomValidity('Please enter your name.'); name.reportValidity(); return; }
+  if (navigator.locks) await navigator.locks.request(storageKey, sendRequest);
+  else await sendRequest();
 });
 purchaseForm.elements.name.addEventListener('input', () => purchaseForm.elements.name.setCustomValidity(''));
+window.addEventListener('storage', refreshLimits);
+window.addEventListener('pageshow', refreshLimits);
+setInterval(refreshLimits, 1000);
+refreshLimits();
 </script></body></html>
 
 
