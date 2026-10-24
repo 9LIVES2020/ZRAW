@@ -1521,3 +1521,9 @@ body.player-open { overflow: hidden; }
   .zcomms-lede:last-child { font-size: 11px !important; line-height: 1.4; }
 }
 
+
+/* Arcade stays inside the QR panel's left column; controls stay in its iframe. */
+.qr-intro { min-width: 0; }
+.zraw-arcade { width:100%; margin-bottom:24px; background:#080808; border:1px solid #64151b; container-type:inline-size; }
+.zraw-arcade iframe { display:block; width:100%; height:600px; border:0; }
+@supports (width:1cqw) { .zraw-arcade iframe { height:calc(56.25cqw + 220px); min-height:440px; } }
