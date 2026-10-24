@@ -25,79 +25,54 @@
 <div class="summary"><span>Bundle price</span><span>PHP 1,500</span></div>
 <!-- Purchase requests are handled by email. Deliver paid files and serial keys manually after payment confirmation. -->
 <p><strong>License limits:</strong> Register up to <strong>5 devices</strong>. Use up to <strong>2 registered devices simultaneously</strong>.</p><p class="note">This page does not accept payments. Sending a request does not complete a purchase. Payment is arranged directly by email.</p>
-<form id="purchaseForm" action="https://formspree.io/f/xaqkydoe" method="POST">
+<form id="purchaseForm" action="/api/purchase-request" method="POST">
 <label for="buyerName">Your name</label><input id="buyerName" name="name" type="text" autocomplete="name" maxlength="120" required>
 <label for="buyerEmail">Your email</label><input id="buyerEmail" name="email" type="email" autocomplete="email" maxlength="254" required>
 <input type="hidden" name="_subject" value="Z-COMMS Bundle Purchase Request">
 <input type="hidden" name="message" value="Purchase request: Z-COMMS Windows + Android bundle. Price: PHP 1,500. License: up to 5 registered devices, with up to 2 registered devices in use simultaneously. Please reply with the Terms and Conditions and payment instructions. No payment has been made on this page.">
 <p class="note">Your name and email will be sent through Formspree to ZRAW to handle your purchase request. We will reply to the email you provide with terms and payment instructions.</p>
 <p class="note" id="requestLimit">Up to 10 requests per day, with 1 minute between requests. Resets at midnight GMT+8.</p>
-<button class="email-order" type="submit">Send purchase request</button>
+<button class="email-order" type="submit" disabled>Send purchase request</button>
 <p class="note" id="purchaseStatus" role="status" aria-live="polite"></p>
 <p class="note">No payment is collected here. You can also contact <a href="mailto:zraw.services@gmail.com">zraw.services@gmail.com</a>.</p>
 </form>
 </section></div><a class="back" href="index.html#z-comms">&#8592; Back to Z-COMMS</a></main><script>
-const purchaseForm = document.getElementById('purchaseForm');
-const purchaseStatus = document.getElementById('purchaseStatus');
-const button = purchaseForm.querySelector('button');
-const limitText = document.getElementById('requestLimit');
-const storageKey = 'zcomms-purchase-limits-v1';
-let sending = false;
-function dayKey(now) { return new Date(now + 8 * 3600000).toISOString().slice(0, 10); }
-function readLimits(now = Date.now()) {
-  const raw = JSON.parse(localStorage.getItem(storageKey) || '{}');
-  return { day: dayKey(now), count: raw.day === dayKey(now) && Number.isInteger(raw.count) ? Math.max(0, raw.count) : 0, next: Number.isFinite(raw.next) ? raw.next : 0 };
+const form=document.getElementById('purchaseForm');
+const status=document.getElementById('purchaseStatus');
+const limit=document.getElementById('requestLimit');
+const button=form.querySelector('button');
+let ready=false, sending=false, count=0, until=0;
+function update(){
+ const seconds=Math.max(0,Math.ceil((until-Date.now())/1000));
+ button.disabled=!ready||sending||seconds>0||count>=10;
+ button.textContent=sending?'Sending…':!ready?'Connecting…':count>=10?'Daily limit reached':seconds?'Try again in '+seconds+'s':'Send purchase request';
+ limit.textContent=count+' of 10 requests used today. Wait 1 minute between requests. Resets at midnight GMT+8.';
 }
-function refreshLimits() {
-  try {
-    const limits = readLimits();
-    const seconds = Math.max(0, Math.ceil((limits.next - Date.now()) / 1000));
-    button.disabled = sending || limits.count >= 10 || seconds > 0;
-    button.textContent = sending ? 'Sending…' : limits.count >= 10 ? 'Daily limit reached' : seconds ? 'Try again in ' + seconds + 's' : 'Send purchase request';
-    limitText.textContent = limits.count >= 10 ? '10 of 10 requests sent today. Requests reopen at midnight GMT+8.' : limits.count + ' of 10 requests sent today. Please wait 1 minute between requests. Resets at midnight GMT+8.';
-  } catch {
-    button.disabled = true;
-    limitText.textContent = 'Please enable browser storage to send a request, or contact us by email.';
-  }
+function apply(data){if(Number.isInteger(data.count))count=data.count;if(Number.isFinite(data.retryAfter))until=Date.now()+data.retryAfter*1000;}
+async function sync(){
+ try{const response=await fetch('/api/purchase-request',{cache:'no-store'});const data=await response.json();if(!response.ok)throw Error();apply(data);ready=true;}
+ catch{ready=false;status.textContent='Unable to check request limits. Reload to try again, or email zraw.services@gmail.com.';}
+ update();
 }
-async function sendRequest() {
-  const now = Date.now();
-  let limits;
-  try {
-    limits = readLimits(now);
-    if (limits.count >= 10 || limits.next > now) { refreshLimits(); return; }
-    limits.next = now + 60000;
-    localStorage.setItem(storageKey, JSON.stringify(limits));
-  } catch { refreshLimits(); return; }
-  sending = true;
-  refreshLimits();
-  purchaseStatus.textContent = 'Sending your request…';
-  try {
-    const response = await fetch(purchaseForm.action, {method: 'POST', headers: {Accept: 'application/json'}, body: new FormData(purchaseForm)});
-    if (!response.ok) throw new Error('Request not accepted');
-    const current = readLimits();
-    current.count += 1;
-    current.next = Math.max(current.next, Date.now() + 60000);
-    localStorage.setItem(storageKey, JSON.stringify(current));
-    purchaseForm.reset();
-    purchaseStatus.textContent = 'Request sent. ZRAW will reply by email with terms and payment instructions. No payment has been taken.';
-  } catch {
-    purchaseStatus.textContent = 'We could not confirm your request was sent. Please wait for the cooldown before retrying, or email zraw.services@gmail.com. Your details are still here.';
-  } finally { sending = false; refreshLimits(); }
-}
-purchaseForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  if (sending) return;
-  const name = purchaseForm.elements.name;
-  if (!name.value.trim()) { name.setCustomValidity('Please enter your name.'); name.reportValidity(); return; }
-  if (navigator.locks) await navigator.locks.request(storageKey, sendRequest);
-  else await sendRequest();
+form.addEventListener('submit',async event=>{
+ event.preventDefault();
+ if(!ready||sending||Date.now()<until||count>=10)return;
+ const name=form.elements.name.value.trim();
+ if(!name){form.elements.name.setCustomValidity('Please enter your name.');form.elements.name.reportValidity();return;}
+ sending=true;update();status.textContent='Sending your request…';
+ try{
+ const response=await fetch('/api/purchase-request',{method:'POST',headers:{'Content-Type':'application/json','X-ZRAW-Request':'1'},body:JSON.stringify({name,email:form.elements.email.value.trim()})});
+ const data=await response.json();apply(data);
+ if(!response.ok)throw Error(data.error||'Request not sent. Please try again later.');
+ form.reset();status.textContent='Request sent. ZRAW will reply by email with terms and payment instructions. No payment has been taken.';
+ }catch(error){status.textContent=error.message||'Delivery could not be confirmed. Please reload before retrying.';await sync();}
+ finally{sending=false;update();}
 });
-purchaseForm.elements.name.addEventListener('input', () => purchaseForm.elements.name.setCustomValidity(''));
-window.addEventListener('storage', refreshLimits);
-window.addEventListener('pageshow', refreshLimits);
-setInterval(refreshLimits, 1000);
-refreshLimits();
+form.elements.name.addEventListener('input',()=>form.elements.name.setCustomValidity(''));
+window.addEventListener('pageshow',sync);
+window.addEventListener('focus',()=>{if(!sending)sync();});
+setInterval(()=>{if(ready&&until>0&&Date.now()>=until&&!sending){until=0;sync();}update();},1000);
+sync();
 </script></body></html>
 
 
