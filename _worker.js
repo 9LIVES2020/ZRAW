@@ -83,7 +83,7 @@ async function purchase(request, env) {
     }
     let delivered=false;
     try {
-      const response=await fetch('https://formspree.io/f/xaqkydoe',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({name,email,_subject:'Z-COMMS Bundle Purchase Request',message:'Purchase request: Windows + Android bundle. PHP 1,500. Up to 5 registered devices and 2 in use simultaneously. Please send the terms and payment instructions. No payment collected.'}),signal:AbortSignal.timeout(20000)});
+      const response=await fetch('https://formspree.io/f/xaqkydoe',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json',Referer:url.origin+'/zcomms-order',Origin:url.origin,'User-Agent':request.headers.get('User-Agent')||'ZRAW purchase form'},body:JSON.stringify({name,email,_subject:'Z-COMMS Bundle Purchase Request',message:'Purchase request: Windows + Android bundle. PHP 1,500. Up to 5 registered devices and 2 in use simultaneously. Please send the terms and payment instructions. No payment collected.'}),signal:AbortSignal.timeout(20000)});
       delivered=response.ok;
     } catch { /* Keep reservation when delivery is uncertain to avoid duplicates. */ }
     const state=requestState(await get(),Date.now());
