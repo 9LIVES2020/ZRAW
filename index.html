@@ -326,7 +326,11 @@
     <script src="vendor/qrcode-generator.min.js"></script>
     <script src="script.js"></script>
     <script src="site-status.js"></script>
-  </body>
+  <script>
+window.addEventListener('message',function(event){const frame=document.querySelector('.zraw-arcade iframe');if(!frame||event.source!==frame.contentWindow||event.origin!==location.origin)return;if(event.data?.type==='zraw-arcade-height'&&Number.isFinite(event.data.height)){frame.style.height=Math.min(1600,Math.max(280,event.data.height))+'px';}});
+// Keep vertical scrolling within the taller QR panel on desktop.
+document.querySelector('#qr-maker').addEventListener('wheel',function(event){if(this.scrollHeight>this.clientHeight+2&&Math.abs(event.deltaY)>Math.abs(event.deltaX))event.stopPropagation();});
+</script></body>
 </html>
 
 
